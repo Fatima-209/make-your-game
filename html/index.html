@@ -4,26 +4,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="C:\Users\fatima\make-your-game\style\style.css">
+  <link rel="stylesheet" href="C:\Users\fatima\make-your-game\css\style.css">
+  <script src="C:\Users\fatima\make-your-game\js\script.js" defer></script>
   <title id="G-title">
-    Snake Game!
+    🐍Snake Game!
   </title>
 </head>
 
 <body>
   <!--main image bg-->
   <div id="background">
-    <!--the game box-->
-    <div id="game-box">
-      <!--score, time, and lives-->
-      <div id="hud">
-        <span id="timer">Time: 0</span>
-        <span id="score">Score: 0</span>
-        <span id="lives">Lives: 3</span>
+    <div class="scores">
+      <div id="snake-right">
+        <img src="C:\Users\fatima\make-your-game\images\snake1.png" alt="Snake Logo Right">
       </div>
-      <div id="game-board"></div>
+      <h1 id="score">Score: 000</h1>
+      <h1 id="timer">Time: 0</h1>
+      <h1 id="lives">Lives: 3</h1>
     </div>
+    <div class="game-border-2">
+      <div class="game-border-3">
+        <div id="game-board"></div>
+      </div>
+    </div>
+    <h1 id="instruction-text">Press spacebar to start the game</h1>
   </div>
 </body>
-
 </html>
