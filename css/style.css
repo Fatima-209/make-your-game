@@ -7,7 +7,7 @@ html, body {
 }
 
 #background {
-  background-color: #e6f6e9; 
+  background-color: #b3d0b9ff; 
   background-size: cover;
   background-position: center;
   height: 100vh;
@@ -70,7 +70,7 @@ html, body {
 
 .snake {
   background: #2d6a4f; 
-  border-radius: 3px;
+  border-radius: 2px;
 }
 .food {
   background: #d00000; 
