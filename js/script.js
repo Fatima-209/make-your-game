@@ -1,44 +1,56 @@
-// connecting html elements with js
+// Config & DOM
 const boardSize = 20;
-var scoreElement = document.getElementById('score');
-var timerElement = document.getElementById('timer');
-var livesElement = document.getElementById('lives');
-var gbElement = document.getElementById('game-board');
-var pausedMsg = document.getElementById('paused-msg');
-var restart = document.getElementById('restart-btn');
-var continueBtn = document.getElementById('continue-btn');
-var gameOverMsg = document.getElementById('game-over');
-var gameOverRestartBtn = document.getElementById('game-over-restart-btn');
-var lastTenderTiem = 0;
-let speed = 200;
+const gbElement = document.getElementById('game-board');
+const scoreElement = document.getElementById('score');
+const timerElement = document.getElementById('timer');
+const livesElement = document.getElementById('lives');
+const pausedMsg = document.getElementById('paused-msg');
+const restartBtn = document.getElementById('restart-btn');
+const continueBtn = document.getElementById('continue-btn');
+const gameOverMsg = document.getElementById('game-over');
+const gameOverRestartBtn = document.getElementById('game-over-restart-btn');
+
 let score = 0;
-var lives = 3;
+let lives = 3;
 let isPaused = false;
-let lastDirectionX = 1;
+// timer
+let gameStartTime = null;
+let elapsedPauseTime = 0;
+let pauseStart = null;
+// timing (requestAnimationFrame loop)
+let lastFrameTime = 0;
+let acc = 0;              
+const MOVE_INTERVAL = 200; // how many ms between snake moves
+
+// directions
+let lastDirectionX = 0; 
 let lastDirectionY = 0;
-// -1 = left, 0 = no horizontal movement, 1 = right
 let directionX = 0;
-// -1 is up, 0 no vertical movement, 1 is down 
 let directionY = 0;
-let startTime = null;
-let elapsedSeconds = 0;
 
 let snakePosition = [
-    { x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+    { x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }
+];
 let food = { x: 5, y: 5 };
 
-
+// to generate food not on the snake
+function randomFoodNotOnSnake() {
+    while (true) {
+        const candidate = {
+            x: Math.floor(Math.random() * boardSize) + 1,
+            y: Math.floor(Math.random() * boardSize) + 1
+        };
+        const onSnake = snakePosition.some(s => s.x === candidate.x && s.y === candidate.y);
+        if (!onSnake) return candidate;
+    }
+}
 
 function drawSnake() {
     gbElement.innerHTML = "";
     snakePosition.forEach(segment => {
-        // adds a div
         const snakeSeg = document.createElement('div');
-        // adds the position of the row
         snakeSeg.style.gridRowStart = segment.y;
-        // column position
         snakeSeg.style.gridColumnStart = segment.x;
-        // to implement the snake class
         snakeSeg.classList.add('snake');
         gbElement.appendChild(snakeSeg);
     });
@@ -48,130 +60,150 @@ function drawSnake() {
     foodElement.classList.add('food');
     gbElement.appendChild(foodElement);
 }
-// event listener
-document.addEventListener('keydown', (event) => {
-    if (event.key == 'ArrowUp' && lastDirectionY !== 1) {
-        directionX = 0;
-        directionY = -1;
-    } else if (event.key == 'ArrowDown' && lastDirectionY !== -1) {
-        directionX = 0;
-        directionY = 1;
-    } else if (event.key == 'ArrowRight' && lastDirectionX !== -1) {
-        directionX = 1;
-        directionY = 0;
-    } else if (event.key == 'ArrowLeft' && lastDirectionX !== 1) {
-        directionX = -1;
-        directionY = 0;
-    } else if (event.key === ' ') {
-        isPaused = !isPaused;
-        pausedMsg.style.display = isPaused ? "block" : "none";
 
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowUp' || event.code === 'ArrowUp') {
+        // prevent 180 degree reversal
+        if (!(lastDirectionY === 1 && lastDirectionX === 0)) {
+            directionX = 0; directionY = -1;
+        }
+    } else if (event.key === 'ArrowDown' || event.code === 'ArrowDown') {
+        if (!(lastDirectionY === -1 && lastDirectionX === 0)) {
+            directionX = 0; directionY = 1;
+        }
+    } else if (event.key === 'ArrowLeft' || event.code === 'ArrowLeft') {
+        if (!(lastDirectionX === 1 && lastDirectionY === 0)) {
+            directionX = -1; directionY = 0;
+        }
+    } else if (event.key === 'ArrowRight' || event.code === 'ArrowRight') {
+        if (!(lastDirectionX === -1 && lastDirectionY === 0)) {
+            directionX = 1; directionY = 0;
+        }
+    } else if (event.code === 'Space' || event.key === ' ') {
+        isPaused = !isPaused;
+        pausedMsg.style.display = isPaused ? 'block' : 'none';
     }
-    continueBtn.addEventListener("click", () => {
-        isPaused = false;
-        pausedMsg.style.display = "none";
+});
+
+if (continueBtn) {
+    continueBtn.addEventListener('click', () => {
+        if (lives > 0) {
+            isPaused = false;
+            pausedMsg.style.display = 'none';
+        }
     });
-    restart.addEventListener("click", () => restartGame());
+}
+if (restartBtn) {
+    restartBtn.addEventListener('click', restartGame);
+}
+if (gameOverRestartBtn) {
     gameOverRestartBtn.addEventListener('click', () => {
         gameOverMsg.style.display = 'none';
         restartGame();
     });
+}
 
-})
-
-function gameLoop() {
-    drawSnake();
-    // so the snake only updates every 200ms instead of every frame.
-    if ((currentTime - lastRenderTime) < speed) {
-        requestAnimationFrame(gameLoop);
+function updateOnce() {
+    // If no direction chosen yet, don't move (this prevents immediate self-collision)
+    if (directionX === 0 && directionY === 0) {
         return;
     }
-    lastRenderTime = currentTime;
-    // if the game is paused, we return before running any code
-    if (isPaused) {
-        pausedMsg.textContent = 'Paused';
-        pausedMsg.style.display = 'block';
-        requestAnimationFrame(gameLoop);
-        return;
-    } else {
-        pausedMsg.style.display = 'none';
-    }
-    let head = snakePosition[0];
-    let newHead = { x: head.x + directionX, y: head.y + directionY }
-    snakePosition.unshift(newHead);
-    // collision with the wall
+
+    const head = snakePosition[0];
+    const newHead = { x: head.x + directionX, y: head.y + directionY };
+
     if (newHead.x < 1 || newHead.x > boardSize || newHead.y < 1 || newHead.y > boardSize) {
-        alert('You hit the wall!')
         lives -= 1;
         livesElement.textContent = `Lives: ${lives}`;
         if (lives <= 0) {
             isPaused = true;
-            gameOverMsg.style.display = 'flex';
+            gameOverMsg && (gameOverMsg.style.display = 'flex');
+            return;
+        } else {
+            // reset snake but keep game running (let player press continue)
+            snakePosition = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+            directionX = 0; directionY = 0;
+            lastDirectionX = 0; lastDirectionY = 0;
+            return;
+        }
+    }
+
+    // check self collision BEFORE adding newHead
+    if (snakePosition.some(seg => seg.x === newHead.x && seg.y === newHead.y)) {
+        lives -= 1;
+        livesElement.textContent = `Lives: ${lives}`;
+        if (lives <= 0) {
+            isPaused = true;
+            gameOverMsg && (gameOverMsg.style.display = 'flex');
             return;
         } else {
             snakePosition = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
-            directionX = 0;
-            directionY = 0;
+            directionX = 0; directionY = 0;
+            lastDirectionX = 0; lastDirectionY = 0;
+            return;
         }
     }
-    // collision with itself
-    for (let i = 1; i < snakePosition.length; i++) {
-        if (newHead.x === snakePosition[i].x && newHead.y === snakePosition[i].y) {
-            alert('You hit the snake itself!')
-            lives -= 1;
-            livesElement.textContent = `Lives: ${lives}`;
-            if (lives <= 0) {
-                isPaused = true;
-                gameOverMsg.style.display = 'flex';
-                return;
-            } else {
-                snakePosition = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
-                directionX = 0;
-                directionY = 0;
-            }
-        }
-    }
-    // collision with food
+
+    // safe to add the new head
+    snakePosition.unshift(newHead);
+
     if (newHead.x === food.x && newHead.y === food.y) {
         score += 1;
         scoreElement.textContent = `Score: ${score}`;
-        // random would give nums bet 0 and 19.999 and the floor would round it down
-        food = {
-            x: Math.floor(Math.random() * boardSize) + 1,
-            y: Math.floor(Math.random() * boardSize) + 1
-        }
-        // to avoid reversing
-        lastDirectionX = directionX;
-        lastDirectionY = directionY;
+        food = randomFoodNotOnSnake();
     } else {
-        // this will remove the last segment 
         snakePosition.pop();
     }
-    requestAnimationFrame(gameLoop);
-};
+
+    // update lastDirection so reversing prevention works next time
+    lastDirectionX = directionX;
+    lastDirectionY = directionY;
+}
+
+function gameLoop(timestamp) {
+    window.requestAnimationFrame(gameLoop);
+
+    // compute how much time passed since last frame
+    if (!lastFrameTime) lastFrameTime = timestamp;
+    const delta = timestamp - lastFrameTime;
+    lastFrameTime = timestamp;
+
+    drawSnake();
+
+    // if paused, do not update the game state
+    if (isPaused) {
+        pausedMsg && (pausedMsg.style.display = 'block');
+        return;
+    } else {
+        pausedMsg && (pausedMsg.style.display = 'none');
+    }
+
+    acc += delta;
+    while (acc >= MOVE_INTERVAL) {
+        updateOnce();
+        acc -= MOVE_INTERVAL;
+    }
+}
 
 function restartGame() {
     score = 0;
     lives = 3;
-    directionX = 0;
-    directionY = 0;
+    directionX = 0; directionY = 0;
+    lastDirectionX = 0; lastDirectionY = 0;
     isPaused = false;
-    lastDirectionX = 1;
-    lastDirectionY = 0;
-    snakePosition = [
-        { x: 10, y: 10 },
-        { x: 9, y: 10 },
-        { x: 8, y: 10 }];
-    food = {
-        x: Math.floor(Math.random() * boardSize) + 1,
-        y: Math.floor(Math.random() * boardSize) + 1
-    }
-    // to remove the pause msg
-    pausedMsg.style.display = 'none';
-    livesElement.textContent = `Lives: ${lives}`;
+    snakePosition = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+    food = randomFoodNotOnSnake();
     scoreElement.textContent = `Score: ${score}`;
+    livesElement.textContent = `Lives: ${lives}`;
+    pausedMsg && (pausedMsg.style.display = 'none');
+    gameOverMsg && (gameOverMsg.style.display = 'none');
+    // performance.now returns timestamp in ms
+    gameStartTime = performance.now();
+    elapsedPauseTime = 0;
+    pauseStart = null;
+    timerElement.textContent = 'Time: 0s';
     drawSnake();
-    requestAnimationFrame(gameLoop)
 }
-restart.addEventListener('click', restartGame);
-requestAnimationFrame(gameLoop);
+ 
+drawSnake();
+window.requestAnimationFrame(gameLoop);

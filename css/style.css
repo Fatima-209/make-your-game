@@ -1,22 +1,18 @@
-html,
-body {
+/* Reset */
+html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family:Arial, Helvetica, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   color: #1a1a1a;
+  background-color: #f5f5dc;
 }
 
+/* Background and main layout */
 #background {
-
-  background-position: center;
-  background-color: #f5f5dc;
-  /* beige fallback */
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-image: url("../images/Screenshot\ 2025-09-15\ 191441.png");
+  background-image: url("../images/Screenshot 2025-09-15 191441.png");
   background-size: cover;
+  background-position: center;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -25,50 +21,34 @@ body {
   gap: 1.5rem;
 }
 
-#snake-right {
-  position: fixed;
-  bottom: 30px;
-  right: 60px;
-  width: 530px;
-  height: auto;
-  z-index: 20;
-}
-#paused-msg {
-   position: fixed;
-  bottom: 30px;
-  right: 60px;
-  width: 530px;
-  height: auto;
-  z-index: 20;
-}
-#snake-right img {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  display: block;
-}
-
-
+/* Scores display */
 .scores {
   display: flex;
   justify-content: center;
   gap: 2rem;
-  font-size: 0.6rem;
+  font-size: 0.8rem;
   color: #195596;
+  font-weight: 400;
   border-radius: 8px;
-  font-weight: 300;
 }
-
-/* Game borders */
-.game-border-2,
-.game-border-3 {
+#instructions {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  font-size: 1rem;
+  color: #195596;
+  font-weight: 600;
+  border-radius: 8px;
+}
+/* Game board styling */
+.game-border-2, .game-border-3 {
   padding: 8px;
-  border-radius: px;
+  border-radius: 8px;
 }
 
-
 .game-border-3 {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 #game-board {
@@ -81,10 +61,10 @@ body {
   border: 2px solid navy;
 }
 
-
+/* Snake and food */
 .snake {
   background: #9BC8AD;
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 .food {
@@ -92,21 +72,53 @@ body {
   border-radius: 50%;
 }
 
-#paused-msg {
-  font-size: 0.5rem;
-  font-weight: 200;
-  color: #444;
-  margin-top: 0.5rem;
-}
-#game-over-msg {
+/* Game over / paused overlay */
+#game-over, #paused-msg {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.7);
-  color: white;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  font-size: 3rem;
-  z-index: 10;
+  background: rgba(237, 234, 234, 0.6);
+  color: #cd3a3a;
+  gap: 1rem;
+  text-align: center;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+#paused-msg h1 {
+  font-size: 2rem;
+  font-weight: 400;
+  color: #333;
+    justify-content: center;
+
+}
+
+#paused-msg button, #game-over button {
+  background-color: #9BC8AD;
+  color: rgb(200, 94, 94);
+  border: none;
+  padding: 0.8rem 2rem;
+  margin: 0.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  justify-content: center;
+}
+
+#paused-msg button:hover, #game-over button:hover {
+  transform: translateY(-2px);
+  background-color: #82b394;
+}
+
+#restart-btn {
+  background-color: #EB9872;
+  text-align: center;
+}
+
+#restart-btn:hover {
+  background-color: #d87963;
+  text-align: center;
 }
