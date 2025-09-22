@@ -1,4 +1,3 @@
-// Config & DOM
 const boardSize = 20;
 const gbElement = document.getElementById('game-board');
 const scoreElement = document.getElementById('score');
@@ -17,13 +16,14 @@ let isPaused = false;
 let gameStartTime = null;
 let elapsedPauseTime = 0;
 let pauseStart = null;
+let lastDisplayedScore = -1;
 // timing (requestAnimationFrame loop)
 let lastFrameTime = 0;
-let acc = 0;              
+let acc = 0;
 const MOVE_INTERVAL = 200; // how many ms between snake moves
 
 // directions
-let lastDirectionX = 0; 
+let lastDirectionX = 0;
 let lastDirectionY = 0;
 let directionX = 0;
 let directionY = 0;
@@ -80,16 +80,25 @@ document.addEventListener('keydown', (event) => {
             directionX = 1; directionY = 0;
         }
     } else if (event.code === 'Space' || event.key === ' ') {
-        isPaused = !isPaused;
-        pausedMsg.style.display = isPaused ? 'block' : 'none';
+        if (!isPaused) {
+            isPaused = true;
+            pausedMsg.style.display = 'block';
+            pauseTimer();   
+        } else {
+            // resuming
+            isPaused = false;
+            pausedMsg.style.display = 'none';
+            resumeTimer();  
+        }
     }
 });
 
 if (continueBtn) {
     continueBtn.addEventListener('click', () => {
-        if (lives > 0) {
+        if (lives > 0 && isPaused) {
             isPaused = false;
             pausedMsg.style.display = 'none';
+            resumeTimer();
         }
     });
 }
@@ -104,6 +113,8 @@ if (gameOverRestartBtn) {
 }
 
 function updateOnce() {
+    calcTime();
+
     // If no direction chosen yet, don't move (this prevents immediate self-collision)
     if (directionX === 0 && directionY === 0) {
         return;
@@ -161,6 +172,7 @@ function updateOnce() {
 }
 
 function gameLoop(timestamp) {
+
     window.requestAnimationFrame(gameLoop);
 
     // compute how much time passed since last frame
@@ -183,6 +195,7 @@ function gameLoop(timestamp) {
         updateOnce();
         acc -= MOVE_INTERVAL;
     }
+
 }
 
 function restartGame() {
@@ -201,9 +214,37 @@ function restartGame() {
     gameStartTime = performance.now();
     elapsedPauseTime = 0;
     pauseStart = null;
+    lastDisplayedScore = -1;
     timerElement.textContent = 'Time: 0s';
     drawSnake();
 }
- 
+function calcTime() {
+    if (!gameStartTime) return;
+    const now = performance.now();
+    // If it's currently paused (pauseStart set), use pauseStart as "frozen now"
+    const effectiveNow = pauseStart ? pauseStart : now;
+
+    const totalMs = effectiveNow - gameStartTime - elapsedPauseTime;
+    const seconds = Math.floor(Math.max(0, totalMs) / 1000);
+
+    if (seconds !== lastDisplayedScore) {
+        timerElement.textContent = `Time: ${seconds}s`;
+        lastDisplayedScore = seconds;
+    }
+}
+
+function pauseTimer() {
+    if (!pauseStart) {
+        pauseStart = performance.now();
+    }
+}
+function resumeTimer() {
+    if (pauseStart) {
+        elapsedPauseTime += performance.now() - pauseStart;
+        pauseStart = null;
+    }
+}
+
+restartGame();
 drawSnake();
 window.requestAnimationFrame(gameLoop);
