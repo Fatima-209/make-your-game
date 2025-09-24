@@ -13,7 +13,7 @@ let score = 0;
 let lives = 3;
 let isPaused = false;
 let isGameOver = false;
-
+let hasMoved = false;
 // timer
 let gameStartTime = null;
 let elapsedPauseTime = 0;
@@ -31,21 +31,21 @@ let directionX = 0;
 let directionY = 0;
 
 let snakePosition = [
-    { x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }
-];
+    { x: 10, y: 10 }];
 let food = { x: 5, y: 5 };
 
-// to generate food not on the snake
 function randomFoodNotOnSnake() {
     while (true) {
         const candidate = {
-            x: Math.floor(Math.random() * boardSize) + 1,
-            y: Math.floor(Math.random() * boardSize) + 1
+            x: Math.floor(Math.random() * (boardSize - 2)) + 2, // between 2 and boardSize-1
+            y: Math.floor(Math.random() * (boardSize - 2)) + 2  // between 2 and boardSize-1
         };
-        const onSnake = snakePosition.some(s => s.x === candidate.x && s.y === candidate.y);
-        if (!onSnake) return candidate;
+        if (!snakePosition.some(s => s.x === candidate.x && s.y === candidate.y)) {
+            return candidate;
+        }
     }
 }
+
 
 function drawSnake() {
     gbElement.innerHTML = "";
@@ -65,24 +65,16 @@ function drawSnake() {
 
 document.addEventListener('keydown', (event) => {
     if (isGameOver) return;
-    if (event.key === 'ArrowUp' || event.code === 'ArrowUp') {
-        // prevent 180 degree reversal
-        if (!(lastDirectionY === 1 && lastDirectionX === 0)) {
-            directionX = 0; directionY = -1;
-        }
-    } else if (event.key === 'ArrowDown' || event.code === 'ArrowDown') {
-        if (!(lastDirectionY === -1 && lastDirectionX === 0)) {
-            directionX = 0; directionY = 1;
-        }
-    } else if (event.key === 'ArrowLeft' || event.code === 'ArrowLeft') {
-        if (!(lastDirectionX === 1 && lastDirectionY === 0)) {
-            directionX = -1; directionY = 0;
-        }
-    } else if (event.key === 'ArrowRight' || event.code === 'ArrowRight') {
-        if (!(lastDirectionX === -1 && lastDirectionY === 0)) {
-            directionX = 1; directionY = 0;
-        }
-    } else if (event.code === 'Space' || event.key === ' ') {
+    if (event.key === 'ArrowLeft' && (snakePosition.length === 1 || lastDirectionX !== 1)) {
+        directionX = -1; directionY = 0;
+    } else if (event.key === 'ArrowRight' && (snakePosition.length === 1 || lastDirectionX !== -1)) {
+        directionX = 1; directionY = 0;
+    } else if (event.key === 'ArrowUp' && (snakePosition.length === 1 || lastDirectionY !== 1)) {
+        directionX = 0; directionY = -1;
+    } else if (event.key === 'ArrowDown' && (snakePosition.length === 1 || lastDirectionY !== -1)) {
+        directionX = 0; directionY = 1;
+    }
+    else if (event.code === 'Space' || event.key === ' ') {
         if (isGameOver) return; // <--- ignore space if game over
 
         if (!isPaused) {
@@ -120,6 +112,16 @@ if (gameOverRestartBtn) {
 
 function updateOnce() {
     calcTime();
+    // If starting, always allow the first move
+    if (snakePosition.length === 3 && directionX !== 0) {
+        // Check if moving into body at game start
+        const nextHeadX = snakePosition[0].x + directionX;
+        const nextHeadY = snakePosition[0].y + directionY;
+        if (snakePosition.some(seg => seg.x === nextHeadX && seg.y === nextHeadY)) {
+            // Ignore the move. Wait for a valid direction.
+            return;
+        }
+    }
 
     // If no direction chosen yet, don't move (this prevents immediate self-collision)
     if (directionX === 0 && directionY === 0) {
@@ -141,7 +143,7 @@ function updateOnce() {
         }
         else {
             // reset snake but keep game running (let player press continue)
-            snakePosition = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+            snakePosition = [{ x: 10, y: 10 }];
             directionX = 0; directionY = 0;
             lastDirectionX = 0; lastDirectionY = 0;
             //isPaused = true;
@@ -150,7 +152,7 @@ function updateOnce() {
     }
 
     // check self collision BEFORE adding newHead
-    if (snakePosition.some(seg => seg.x === newHead.x && seg.y === newHead.y)) {
+    if (hasMoved && snakePosition.some(seg => seg.x === newHead.x && seg.y === newHead.y)) {
         lives = Math.max(0, lives - 1);
         livesElement.textContent = `Lives: ${lives}`;
 
@@ -159,14 +161,14 @@ function updateOnce() {
             isPaused = true;
             gameOverMsg && (gameOverMsg.style.display = 'flex');
             return;
-        }
-        else {
-            snakePosition = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+        } else {
+            snakePosition = [{ x: 10, y: 10 }];
             directionX = 0; directionY = 0;
             lastDirectionX = 0; lastDirectionY = 0;
             return;
         }
     }
+
 
     // safe to add the new head
     snakePosition.unshift(newHead);
@@ -182,20 +184,19 @@ function updateOnce() {
     // update lastDirection so reversing prevention works next time
     lastDirectionX = directionX;
     lastDirectionY = directionY;
+    hasMoved = true;
+
 }
 
 function gameLoop(timestamp) {
-
     window.requestAnimationFrame(gameLoop);
 
-    // compute how much time passed since last frame
+    // compute delta
     if (!lastFrameTime) lastFrameTime = timestamp;
     const delta = timestamp - lastFrameTime;
     lastFrameTime = timestamp;
 
-    drawSnake();
-
-    // if paused, do not update the game state
+    // if paused, do not update
     if (isPaused) {
         pausedMsg && (pausedMsg.style.display = 'block');
         return;
@@ -208,10 +209,12 @@ function gameLoop(timestamp) {
         updateOnce();
         acc -= MOVE_INTERVAL;
     }
-
+    drawSnake();
 }
 
+
 function restartGame() {
+    hasMoved = false;
     isGameOver = false;
     lastFrameTime = 0;
     acc = 0;
@@ -220,7 +223,7 @@ function restartGame() {
     directionX = 0; directionY = 0;
     lastDirectionX = 0; lastDirectionY = 0;
     isPaused = false;
-    snakePosition = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+    snakePosition = [{ x: 10, y: 10 }];
     food = randomFoodNotOnSnake();
     scoreElement.textContent = `Score: ${score}`;
     livesElement.textContent = `Lives: ${lives}`;
