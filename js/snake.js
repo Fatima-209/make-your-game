@@ -12,6 +12,8 @@ const gameOverRestartBtn = document.getElementById('game-over-restart-btn');
 let score = 0;
 let lives = 3;
 let isPaused = false;
+let isGameOver = false;
+
 // timer
 let gameStartTime = null;
 let elapsedPauseTime = 0;
@@ -62,6 +64,7 @@ function drawSnake() {
 }
 
 document.addEventListener('keydown', (event) => {
+    if (isGameOver) return;
     if (event.key === 'ArrowUp' || event.code === 'ArrowUp') {
         // prevent 180 degree reversal
         if (!(lastDirectionY === 1 && lastDirectionX === 0)) {
@@ -80,28 +83,31 @@ document.addEventListener('keydown', (event) => {
             directionX = 1; directionY = 0;
         }
     } else if (event.code === 'Space' || event.key === ' ') {
+        if (isGameOver) return; // <--- ignore space if game over
+
         if (!isPaused) {
             isPaused = true;
             pausedMsg.style.display = 'block';
-            pauseTimer();   
+            pauseTimer();
         } else {
-            // resuming
             isPaused = false;
             pausedMsg.style.display = 'none';
-            resumeTimer();  
+            resumeTimer();
         }
     }
-});
+}
+);
 
 if (continueBtn) {
     continueBtn.addEventListener('click', () => {
-        if (lives > 0 && isPaused) {
+        if (!isGameOver && isPaused) {  // <-- allow continue when not game over
             isPaused = false;
             pausedMsg.style.display = 'none';
             resumeTimer();
         }
     });
 }
+
 if (restartBtn) {
     restartBtn.addEventListener('click', restartGame);
 }
@@ -124,30 +130,37 @@ function updateOnce() {
     const newHead = { x: head.x + directionX, y: head.y + directionY };
 
     if (newHead.x < 1 || newHead.x > boardSize || newHead.y < 1 || newHead.y > boardSize) {
-        lives -= 1;
+        lives = Math.max(0, lives - 1);
         livesElement.textContent = `Lives: ${lives}`;
-        if (lives <= 0) {
+
+        if (lives === 0) {
+            isGameOver = true;
             isPaused = true;
             gameOverMsg && (gameOverMsg.style.display = 'flex');
             return;
-        } else {
+        }
+        else {
             // reset snake but keep game running (let player press continue)
             snakePosition = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
             directionX = 0; directionY = 0;
             lastDirectionX = 0; lastDirectionY = 0;
+            //isPaused = true;
             return;
         }
     }
 
     // check self collision BEFORE adding newHead
     if (snakePosition.some(seg => seg.x === newHead.x && seg.y === newHead.y)) {
-        lives -= 1;
+        lives = Math.max(0, lives - 1);
         livesElement.textContent = `Lives: ${lives}`;
-        if (lives <= 0) {
+
+        if (lives === 0) {
+            isGameOver = true;
             isPaused = true;
             gameOverMsg && (gameOverMsg.style.display = 'flex');
             return;
-        } else {
+        }
+        else {
             snakePosition = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
             directionX = 0; directionY = 0;
             lastDirectionX = 0; lastDirectionY = 0;
@@ -199,6 +212,9 @@ function gameLoop(timestamp) {
 }
 
 function restartGame() {
+    isGameOver = false;
+    lastFrameTime = 0;
+    acc = 0;
     score = 0;
     lives = 3;
     directionX = 0; directionY = 0;
