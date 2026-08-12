@@ -1,5 +1,8 @@
 const boardSize = 20;
 const gbElement = document.getElementById('game-board');
+// Derived from the board's actual rendered size so it can't drift out of sync with the CSS.
+const CELL_SIZE = gbElement.clientWidth / boardSize;
+gbElement.style.setProperty('--cell-size', `${CELL_SIZE}px`);
 const scoreElement = document.getElementById('score');
 const timerElement = document.getElementById('timer');
 const livesElement = document.getElementById('lives');
@@ -47,23 +50,41 @@ function randomFoodNotOnSnake() {
 }
 
 
-function drawSnake() {
-    gbElement.innerHTML = "";
-    snakePosition.forEach(segment => {
-        const snakeSeg = document.createElement('div');
-        snakeSeg.style.gridRowStart = segment.y;
-        snakeSeg.style.gridColumnStart = segment.x;
-        snakeSeg.classList.add('snake');
-        gbElement.appendChild(snakeSeg);
-    });
-    const foodElement = document.createElement('div');
-    foodElement.style.gridRowStart = food.y;
-    foodElement.style.gridColumnStart = food.x;
-    foodElement.classList.add('food');
-    gbElement.appendChild(foodElement);
+// Reused across frames instead of rebuilding the DOM each draw, and moved with
+// transform (compositor-only) instead of grid-row/column-start (triggers layout).
+const snakeSegmentPool = [];
+let foodElement = null;
+
+function positionCell(el, x, y) {
+    el.style.transform = `translate3d(${(x - 1) * CELL_SIZE}px, ${(y - 1) * CELL_SIZE}px, 0)`;
 }
 
+function drawSnake() {
+    while (snakeSegmentPool.length < snakePosition.length) {
+        const seg = document.createElement('div');
+        seg.classList.add('snake');
+        gbElement.appendChild(seg);
+        snakeSegmentPool.push(seg);
+    }
+    while (snakeSegmentPool.length > snakePosition.length) {
+        snakeSegmentPool.pop().remove();
+    }
+    snakePosition.forEach((segment, i) => positionCell(snakeSegmentPool[i], segment.x, segment.y));
+
+    if (!foodElement) {
+        foodElement = document.createElement('div');
+        foodElement.classList.add('food');
+        gbElement.appendChild(foodElement);
+    }
+    positionCell(foodElement, food.x, food.y);
+}
+
+const HANDLED_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '];
+
 document.addEventListener('keydown', (event) => {
+    // Stop the browser from scrolling the page on arrow keys / space while playing.
+    if (HANDLED_KEYS.includes(event.key)) event.preventDefault();
+
     if (isGameOver) return;
     if (event.key === 'ArrowLeft' && (snakePosition.length === 1 || lastDirectionX !== 1)) {
         directionX = -1; directionY = 0;
@@ -196,7 +217,11 @@ function gameLoop(timestamp) {
     const delta = timestamp - lastFrameTime;
     lastFrameTime = timestamp;
 
-    // if paused, do not update
+    // if paused, do not update (game over is a separate overlay, not the pause menu)
+    if (isGameOver) {
+        pausedMsg && (pausedMsg.style.display = 'none');
+        return;
+    }
     if (isPaused) {
         pausedMsg && (pausedMsg.style.display = 'block');
         return;
@@ -205,11 +230,15 @@ function gameLoop(timestamp) {
     }
 
     acc += delta;
+    let moved = false;
     while (acc >= MOVE_INTERVAL) {
         updateOnce();
         acc -= MOVE_INTERVAL;
+        moved = true;
     }
-    drawSnake();
+    // Only touch the DOM when the snake actually ticked forward, instead of every
+    // animation frame (~60/s) regardless of whether anything changed.
+    if (moved) drawSnake();
 }
 
 

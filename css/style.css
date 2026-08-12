@@ -52,16 +52,26 @@ html, body {
 }
 
 #game-board {
-  display: grid;
-  grid-template-columns: repeat(20, 1fr);
-  grid-template-rows: repeat(20, 1fr);
+  position: relative;
   width: 500px;
   height: 500px;
   background-color: #F6ECDA;
   border: 2px solid navy;
+  overflow: hidden;
 }
 
-/* Snake and food */
+/* Snake and food: absolutely positioned and moved with transform so movement is
+   compositor-only (no layout/paint of the board on every step). */
+.snake,
+.food {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  will-change: transform;
+}
+
 .snake {
   background: #9BC8AD;
   border-radius: 3px;
@@ -76,6 +86,7 @@ html, body {
 #game-over, #paused-msg {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -113,12 +124,12 @@ html, body {
   background-color: #82b394;
 }
 
-#restart-btn {
+#restart-btn, #game-over-restart-btn {
   background-color: #EB9872;
   text-align: center;
 }
 
-#restart-btn:hover {
+#restart-btn:hover, #game-over-restart-btn:hover {
   background-color: #d87963;
   text-align: center;
 }
