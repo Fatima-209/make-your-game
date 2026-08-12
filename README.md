@@ -15,14 +15,6 @@ Smooth 60 FPS animation • Keyboard controls • Live scoreboard • Pause menu
 
 ---
 
-## 📸 Preview
-
-<div align="center">
-<img src="images/Screenshot 2025-09-15 191441.png" alt="Snake game screenshot" width="600">
-</div>
-
----
-
 ## ✨ Overview
 
 A classic Snake game rebuilt from scratch using **plain JavaScript** — no canvas, no game engine, no frameworks. Just DOM elements, `requestAnimationFrame`, and careful performance tuning to keep gameplay smooth at a stable **60 FPS**.
